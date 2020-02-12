@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat&display=swap');
+
+body{
+	background: #1c525c;
+	color: white;
+	padding: 0px 20%;
+	font-family: 'Montserrat', sans-serif;
+}
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+	color: #999;
+	opacity: 1; /* Firefox */
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+	color: #999;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+	color: #999;
+}
+
+.formInline {
+	display: grid;
+	grid-template-columns: 8fr 1fr;
+	grid-column-gap: 10px;
+	width: 100%;
+	flex-flow: row wrap;
+	align-items: center;
+}
+
+#title{
+	color: #e67c30;
+	font-size: 3em;
+	text-align: center;
+
+}
+
+.searchBar{
+	height: 40px;
+	border-style: groove;
+	border-color: #e67c30;
+	border-radius: 25px;
+	background: #1c525c;
+	color: white;
+	font-size: 1em;
+	padding: 10px;
+}
+
+.searchBar:focus {
+	outline: none;
+}
+
+.searchButton{
+	background: #e67c30;
+	border-style: none;
+	color: white;
+	font-size: 1em;
+	height: 40px;
+	border-radius: 25px;
+	font-weight: bold;
+}
+
+.aResult_content{
+	padding-left: 20px;
+}
+
+.aResult_div{
+	padding:  2px 20px;
+	border-bottom-color: #e67c30;
+	border-bottom-style: solid;
+	border-width: 1px;
+}
+
+.aResult_div:hover{
+	cursor: pointer;
+	background:  #e67c30;
+}
