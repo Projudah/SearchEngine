@@ -91,5 +91,5 @@ def start():
         print('Goodbye.')
 
 if __name__ == '__main__':
-    # webbrowser.open_new(website)
+    webbrowser.open_new(website)
     start()
