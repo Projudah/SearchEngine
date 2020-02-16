@@ -80,6 +80,14 @@ def generate_results():
                    "</div>" % (resultdiv, resulttitle, item[0], resultcontent, item[1])
         html += itemHtml
     return html
+
+def selector():
+    return '''<select id="model">
+  <option value="volvo">Boolean Model</option>
+  <option value="saab">VSM Model</option>
+  <option value="opel">Opel</option>
+  <option value="audi">Audi</option>
+</select>'''
         
 
 def start():

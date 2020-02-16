@@ -17,9 +17,12 @@ Each document should be uniquely identified with a docID.
 
 
 '''
-import csv
+import json
 import os.path
 from bs4 import BeautifulSoup
+
+# folder for corpus
+folder = 'corpus/'
 
 
 def pre_process_UO_courses():
@@ -67,15 +70,29 @@ def pre_process_UO_courses():
             descriptions.append(description) # adding english description
 
     #writing CSV file
-    with open('uoCourses.csv', 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["DocID", "Title", "Description"])
-        for i in range(len(docIds)):
-            newRow = [docIds[i], titles[i], descriptions[i]]
-            writer.writerow(newRow)
+    # with open('uoCourses.csv', 'w', newline='') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerow(["DocID", "Title", "Description"])
+    #     for i in range(len(docIds)):
+    #         newRow = [docIds[i], titles[i], descriptions[i]]
+    #         writer.writerow(newRow)
+    os.mkdir(folder)
+    for id, aTitle, desc in zip(docIds, titles, descriptions):
+        if isEnglish(id):
+            filename = folder+id+'.json'
+            content = [id, aTitle, desc.strip()]
+            with open(filename, 'w+') as f:
+                json.dump(content, f)
+
+#returns true if course code is french
+def isEnglish(id):
+    number = id.split(' ')[1]
+
+    # if second number in course code is less than 5
+    return number[1] < '5'
 
 def run():
-    if not os.path.exists('uoCourses.csv'): #check to make sure the data has not already been parsed
+    if not os.path.exists(folder): #check to make sure the data has not already been parsed
         pre_process_UO_courses()
 
 run()
