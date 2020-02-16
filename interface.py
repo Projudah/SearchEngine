@@ -2,6 +2,7 @@ import main
 import cgi
 from wsgiref.simple_server import make_server
 import webbrowser
+import access
 
 port = 8080
 website = "http://localhost:"+str(port)
@@ -65,8 +66,8 @@ def post(env, resp):
     return generate_results(post['query'])
 
 def generate_results(query):
-    ret = main.parseQuery(query)
-    result = [['Title 1', 'Content 1'],['Title 2', 'Content 2'],['Title 3', 'Content 3'],['Title 4', 'Content 4'],['Title 5', 'Content 5']]
+    idList, _ = main.parseQuery(query)
+    result = access.getAllDocs(idList)
     resultclass = "aResult"
     resulttitle = resultclass+"_title"
     resultcontent = resultclass + "_content"
@@ -78,7 +79,7 @@ def generate_results(query):
         itemHtml = "<div class='%s' >" \
                    "<h2 class='%s'> %s </h2>" \
                    "<p class='%s'> %s </p>" \
-                   "</div>" % (resultdiv, resulttitle, item[0], resultcontent, item[1])
+                   "</div>" % (resultdiv, resulttitle, item[access.TITLE], resultcontent, item[access.EX])
         html += itemHtml
     return html
 

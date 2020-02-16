@@ -58,4 +58,13 @@ def process():
         with open(indexPath, 'w+') as f:
             json.dump(invertedIndex, f)
 
+def retrieve(term):
+    process()
+    with open(indexPath, 'r') as f:
+        invertedIndex = json.load(f)
+    if term in invertedIndex:
+        return invertedIndex[term]
+    return None #{"N/a": {FREQ: 0, DOCS: []}}
+
+
 process()

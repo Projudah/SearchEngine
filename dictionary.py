@@ -8,19 +8,7 @@ porterStem = PorterStemmer()
 
 def build(id, document):
     #tokenize
-    tokens = nltk.word_tokenize(document)
-
-    #convert to lowercase
-    tokens = [word.lower() for word in tokens]
-
-    #Normalize
-    tokens = [normalize(t) for t in tokens]
-
-    #remove stop words
-    tokens = [t for t in tokens if t not in stopwords.words('english')]
-
-    #stem
-    tokens = [porterStem.stem(t) for t in tokens]
+    tokens = parseWords(document)
 
     #convert to dictionary, remove duplicates
     result = {}
@@ -33,3 +21,20 @@ def normalize(token):
     token = token.replace('-',' ')
     token = token.replace('.','')
     return token
+
+def parseWords(words):
+    tokens = nltk.word_tokenize(words)
+
+    # convert to lowercase
+    tokens = [word.lower() for word in tokens]
+
+    # Normalize
+    tokens = [normalize(t) for t in tokens]
+
+    # remove stop words
+    tokens = [t for t in tokens if t not in stopwords.words('english')]
+
+    # stem
+    tokens = [porterStem.stem(t) for t in tokens]
+
+    return tokens

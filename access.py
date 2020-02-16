@@ -20,12 +20,12 @@ def getDoc(id):
 
 def getDocContent(id):
     doc = getDoc(id)
-    excerpt = doc[3][:CHARCOUNT]+'...'
+    excerpt = doc[2][:CHARCOUNT]+'...'
     return {
         ID: id,
         EX: excerpt,
-        TITLE: doc[2],
-        FULL: doc[3]
+        TITLE: doc[1],
+        FULL: doc[2]
     }
 
 def getAllDocs(idList):
