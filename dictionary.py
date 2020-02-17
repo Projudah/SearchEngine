@@ -12,14 +12,17 @@ porterStem = PorterStemmer()
 
 def build(id, document):
     # tokenize
-    tokens = parseWords(document)
+    tokens, nonstemed = parseWords(document)
 
     # convert to dictionary, remove duplicates
     result = {}
+    rawResult = {}
     for token in tokens:
         result[token] = id
+    for token in nonstemed:
+        rawResult[token] = id
 
-    return result
+    return result, rawResult
 
 
 def normalize(token):
@@ -41,7 +44,9 @@ def parseWords(words):
     # remove stop words
     tokens = [t for t in tokens if t not in stopwords.words('english')]
 
+    nonstemmed = tokens.copy()
+
     # stem
     tokens = [porterStem.stem(t) for t in tokens]
 
-    return tokens
+    return tokens, nonstemmed

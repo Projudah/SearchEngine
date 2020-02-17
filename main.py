@@ -175,7 +175,7 @@ def parseBoolean(query, retList, alreadyParsed=''):
 def booleanSearchIndex(query, booleanType=None, retList=None, reverse=False):
     if query == '':
         return []
-    tokens = dictionary.parseWords(query)
+    tokens, _ = dictionary.parseWords(query)
     results = andQueries(tokens)
 
     if results and booleanType and retList:

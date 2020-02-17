@@ -14,15 +14,16 @@ bigramPath = 'bigramIndex.dat'
 
 def getTerms(corpusPath):
     docTerms = []
+    rawTerms = []
 
     for docPath in os.listdir(corpusPath):
         with open(corpusPath+docPath, 'r') as f:
             doc = json.load(f)
 
-        docTerm = dictionary.build(doc[0], doc[2])
+        docTerm, rawTerm = dictionary.build(doc[0], doc[2])
         docTerms.append(docTerm)
-
-    return docTerms
+        rawTerms.append(rawTerm)
+    return docTerms, rawTerms
 
 
 def calculateTermWeight():
@@ -30,7 +31,7 @@ def calculateTermWeight():
 
 
 def generateInvertedIndex():
-    termsList = getTerms('corpus/')
+    termsList, rawList = getTerms('corpus/')
 
     invertedindex = {}
 
@@ -52,7 +53,8 @@ def generateInvertedIndex():
                         WEIGHT: calculateTermWeight()
                     }]
                 }
-    return invertedindex
+    bigramIndex = generatebigramIndex(rawList)
+    return invertedindex, bigramIndex
 
 
 def generateBigrams(term, leftStart=True, rightStart=True):
@@ -68,16 +70,18 @@ def generateBigrams(term, leftStart=True, rightStart=True):
     return bigrams
 
 
-def generatebigramIndex(invertedIndex):
+def generatebigramIndex(termList):
     bigramIndex = {}
-    for term in invertedIndex:
-        bigrams = generateBigrams(term)
+    for doc in termList:
+        for term in doc:
+            bigrams = generateBigrams(term)
 
-        for gram in bigrams:
-            if gram in bigramIndex:
-                bigramIndex[gram] = bigramIndex[gram] + [term]
-            else:
-                bigramIndex[gram] = [term]
+            for gram in bigrams:
+                if gram in bigramIndex:
+                    if term not in bigramIndex[gram]:
+                        bigramIndex[gram] = bigramIndex[gram] + [term]
+                else:
+                    bigramIndex[gram] = [term]
     return bigramIndex
 
 
@@ -85,18 +89,15 @@ def process():
     # check to make sure the data has not already been parsed
     if not os.path.exists(indexPath):
         preProcessing.run()
-        invertedIndex = generateInvertedIndex()
+        invertedIndex, bigramIndex = generateInvertedIndex()
 
         with open(indexPath, 'w+') as f:
             json.dump(invertedIndex, f)
 
-    if not os.path.exists(bigramPath):
-        with open(indexPath, 'r') as f:
-            invertedIndex = json.load(f)
-        bigramIndex = generatebigramIndex(invertedIndex)
+        if not os.path.exists(bigramPath):
 
-        with open(bigramPath, 'w+') as f:
-            json.dump(bigramIndex, f)
+            with open(bigramPath, 'w+') as f:
+                json.dump(bigramIndex, f)
 
 
 def retrieve(term):
