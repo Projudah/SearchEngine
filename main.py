@@ -8,7 +8,7 @@ def expand(fullquery):
     newquery = ''
     for query in splits:
         if '*' in query:
-            query = query
+            query = query.strip('(').strip(')')
             querySplit = query.split('*')
             leftBigram = processing.generateBigrams(
                 querySplit[0], rightStart=False)
@@ -37,6 +37,7 @@ def join(words):
 def andBigrams(grams):
     res = []
     remove = []
+    print(grams)
     for gram in grams:
         terms = processing.retrieveGram(gram)
 
@@ -44,8 +45,9 @@ def andBigrams(grams):
             res = terms
         else:
             for resTerm in res:
-                if resTerm not in terms:
-                    remove.append(resTerm)
+                if terms:
+                    if resTerm not in terms:
+                        remove.append(resTerm)
     for term in remove:
         if term in res:
             res.remove(term)
@@ -192,6 +194,6 @@ def booleanAndNot(result, retList, reverse):
 
 
 if __name__ == '__main__':
-    # print(parseQuery('prin*'))
-    interface.start()
+    print(parseQuery('(*ge AND_NOT (man* OR health*))'))
+    # interface.start()
     # print(expand('computer info*'))
