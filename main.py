@@ -194,6 +194,6 @@ def booleanAndNot(result, retList, reverse):
 
 
 if __name__ == '__main__':
-    print(parseQuery('(*ge AND_NOT (man* OR health*))'))
-    # interface.start()
+    # print(parseQuery('(*ge AND_NOT (man* OR health*))'))
+    interface.start()
     # print(expand('computer info*'))
