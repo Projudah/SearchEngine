@@ -8,6 +8,7 @@
 ## Requirments
 
 nltk
+bs4
 
 ## assumptions
 
