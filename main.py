@@ -2,7 +2,58 @@ import interface
 import processing
 import dictionary
 
+
+def expand(fullquery):
+    splits = fullquery.split(' ')
+    newquery = ''
+    for query in splits:
+        if '*' in query:
+            query = query
+            querySplit = query.split('*')
+            leftBigram = processing.generateBigrams(
+                querySplit[0], rightStart=False)
+            rightBigram = processing.generateBigrams(
+                querySplit[1], leftStart=False)
+
+            bigrams = leftBigram + rightBigram
+            words = andBigrams(bigrams)
+
+            query = join(words) if words != [] else query.replace('*', '')
+
+        space = '' if newquery == '' else ' '
+        newquery += space+query
+    return newquery
+
+
+def join(words):
+    query = words[0]
+
+    for i in range(1, len(words)):
+        term = words[i]
+        query = '('+query+' OR '+term+')'
+    return query
+
+
+def andBigrams(grams):
+    res = []
+    remove = []
+    for gram in grams:
+        terms = processing.retrieveGram(gram)
+
+        if len(res) == 0:
+            res = terms
+        else:
+            for resTerm in res:
+                if resTerm not in terms:
+                    remove.append(resTerm)
+    for term in remove:
+        if term in res:
+            res.remove(term)
+    return res
+
+
 def parseQuery(query):
+    query = expand(query)
     subQuery = ''
     part = ''
     index = 0
@@ -12,7 +63,7 @@ def parseQuery(query):
         char = query[i]
         # print('building:',subQuery)
         if char is '(':
-            subList, part = parseQuery(query[index+1:])
+            returnList, part = parseQuery(query[index+1:])
             partLen = len(part)
             part = '('+part
             # print('internal:', part)
@@ -25,13 +76,14 @@ def parseQuery(query):
             subQuery += char
         index += 1
         i += 1
-
     return parseBoolean(subQuery, returnList, part), subQuery
 
 
 def parseBoolean(query, retList, alreadyParsed=''):
     booleanType = ''
     if alreadyParsed in query and alreadyParsed != '':
+        if alreadyParsed == query:
+            return retList
         parts = query.split(alreadyParsed)
         query = parts[0].strip() if parts[0] != '' else parts[1].strip()
         if 'AND' in query:
@@ -40,7 +92,10 @@ def parseBoolean(query, retList, alreadyParsed=''):
             booleanType = 'OR'
         elif 'AND_NOT' in query:
             booleanType = 'AND_NOT'
-        #else: return
+        # else: return
+
+        if booleanType is '':
+            return booleanSearchIndex(query)
 
         parts = query.split(booleanType)
         query = parts[0].strip() if parts[0] != '' else parts[1].strip()
@@ -67,21 +122,25 @@ def parseBoolean(query, retList, alreadyParsed=''):
 
     # print(query, booleanType, alreadyParsed)
 
+
 def booleanSearchIndex(query, booleanType=None, retList=None, reverse=False):
+    if query == '':
+        return []
     tokens = dictionary.parseWords(query)
     results = andQueries(tokens)
-    # print(results)
 
     if results and booleanType and retList:
         if booleanType is "AND":
             return booleanAnd(results, retList)
         elif booleanType is "OR":
+            # print("the or part:", query)
             return booleanOr(results, retList)
         elif booleanType is "AND_NOT":
             return booleanAndNot(results, retList, reverse)
 
     elif results:
         return booleanOr(results, [])
+
 
 def andQueries(tokens):
     if len(tokens) == 1:
@@ -103,6 +162,7 @@ def andQueries(tokens):
                         res[processing.DOCS].remove(doc)
         return res
 
+
 def booleanAnd(result, retList):
     collection = []
     for doc in result[processing.DOCS]:
@@ -110,12 +170,14 @@ def booleanAnd(result, retList):
             collection.append(doc[processing.ID])
     return collection
 
+
 def booleanOr(result, retList):
     collection = retList
     for doc in result[processing.DOCS]:
         if doc[processing.ID] not in retList:
             collection.append(doc[processing.ID])
     return collection
+
 
 def booleanAndNot(result, retList, reverse):
     collection = retList if reverse else []
@@ -130,5 +192,6 @@ def booleanAndNot(result, retList, reverse):
 
 
 if __name__ == '__main__':
-    # print(parseQuery('computer information'))
+    # print(parseQuery('prin*'))
     interface.start()
+    # print(expand('computer info*'))
