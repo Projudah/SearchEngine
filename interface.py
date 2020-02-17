@@ -84,7 +84,7 @@ def post(env, resp):
 
 
 def generate_results(query):
-    idList, _ = main.parseQuery(query)
+    idList, _ = main.query(query)
     result = access.getAllDocs(idList)
     resultclass = "aResult"
     resulttitle = resultclass+"_title"

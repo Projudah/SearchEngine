@@ -6,22 +6,30 @@ import dictionary
 def expand(fullquery):
     splits = fullquery.split(' ')
     newquery = ''
+    # print("uuu",splits)
     for query in splits:
+        leftBracket = ''
+        rightBracket = ''
         if '*' in query:
-            query = query.strip('(').strip(')')
+            # query = query.strip('(').strip(')')
             querySplit = query.split('*')
+            # print(querySplit)
+            leftBracket = '(' if '(' in querySplit[0] else ''
+            rightBracket = ')' if ')' in querySplit[1] else ''
             leftBigram = processing.generateBigrams(
-                querySplit[0], rightStart=False)
+                querySplit[0].replace('(', '').strip(), rightStart=False) if querySplit[0].replace('(', '').strip() != '' else []
             rightBigram = processing.generateBigrams(
-                querySplit[1], leftStart=False)
+                querySplit[1].replace('(', '').strip(), leftStart=False) if querySplit[1].replace(')', '').strip() != '' else []
 
             bigrams = leftBigram + rightBigram
             words = andBigrams(bigrams)
+            # print(query, bigrams, words)
 
             query = join(words) if words != [] else query.replace('*', '')
 
         space = '' if newquery == '' else ' '
-        newquery += space+query
+        newquery += leftBracket+ (space+query)+ rightBracket
+    # print(newquery)
     return newquery
 
 
@@ -37,9 +45,10 @@ def join(words):
 def andBigrams(grams):
     res = []
     remove = []
-    print(grams)
+    # print(grams)
     for gram in grams:
         terms = processing.retrieveGram(gram)
+        # print(gram,':',terms)
 
         if len(res) == 0:
             res = terms
@@ -53,19 +62,27 @@ def andBigrams(grams):
             res.remove(term)
     return res
 
+def query(query):
+    return parseQuery(expand(query))
 
 def parseQuery(query):
-    query = expand(query)
+    # print('in',query)
     subQuery = ''
     part = ''
     index = 0
     returnList = []
     i = 0
+    left=None
+    right =None
     while i < len(query):
         char = query[i]
         # print('building:',subQuery)
         if char is '(':
-            returnList, part = parseQuery(query[index+1:])
+            returnList, part = parseQuery(query[i+1:])
+            if not left:
+                left = [returnList, part]
+            elif not right:
+                right = [returnList, part]
             partLen = len(part)
             part = '('+part
             # print('internal:', part)
@@ -73,16 +90,45 @@ def parseQuery(query):
             # print('new sub:', subQuery)
             i += partLen
         elif char is ')':
+            # print(parseBoolean(subQuery, returnList, part))
+            if left and right:
+                return parseBooleanResults(left, right, subQuery), subQuery+')'
             return parseBoolean(subQuery, returnList, part), subQuery+')'
         else:
             subQuery += char
         index += 1
         i += 1
+    # print(parseBoolean(subQuery, returnList, part))
+    if left and right:
+        return parseBooleanResults(left, right, subQuery), subQuery
     return parseBoolean(subQuery, returnList, part), subQuery
+
+def parseBooleanResults(left, right, query):
+    subquery = query.split(left[1])[1].split(right[1])[0]
+
+    result = []
+    if 'AND' in subquery:
+        for doc in left[0]:
+            if doc in right[0]:
+                result.append(doc)
+    elif 'OR' in subquery:
+        result = left[0]
+        for doc in right[0]:
+            if doc not in result:
+                result.append(doc)
+    elif 'AND_NOT' in subquery:
+        for doc in left[0]:
+            if doc not in right[0]:
+                result.append(doc)
+
+    return result
 
 
 def parseBoolean(query, retList, alreadyParsed=''):
     booleanType = ''
+    # print('running:',query)
+    # print('already Ran:',alreadyParsed)
+    # print('return from other:', retList,'\n')
     if alreadyParsed in query and alreadyParsed != '':
         if alreadyParsed == query:
             return retList
@@ -101,6 +147,7 @@ def parseBoolean(query, retList, alreadyParsed=''):
 
         parts = query.split(booleanType)
         query = parts[0].strip() if parts[0] != '' else parts[1].strip()
+        # print(query, booleanType, alreadyParsed)
 
         return booleanSearchIndex(query, booleanType, retList, parts[0] == '')
 
@@ -120,9 +167,9 @@ def parseBoolean(query, retList, alreadyParsed=''):
         rightQuery = parts[1].strip()
 
         rightList = booleanSearchIndex(rightQuery)
-        return booleanSearchIndex(leftQuery, booleanType, rightList)
+        # print(query, booleanType, alreadyParsed)
 
-    # print(query, booleanType, alreadyParsed)
+        return booleanSearchIndex(leftQuery, booleanType, rightList)
 
 
 def booleanSearchIndex(query, booleanType=None, retList=None, reverse=False):
@@ -194,6 +241,7 @@ def booleanAndNot(result, retList, reverse):
 
 
 if __name__ == '__main__':
-    # print(parseQuery('(*ge AND_NOT (man* OR health*))'))
+    # print(expand('(*ge AND_NOT (man* OR health*))'))
+    # print(query('ps*logy'))
     interface.start()
     # print(expand('computer info*'))

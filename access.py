@@ -30,8 +30,8 @@ def getDocContent(id):
 
 def getAllDocs(idList):
     docList = []
-
-    for id in idList:
-        docList.append(getDocContent(id))
+    if idList:
+        for id in idList:
+            docList.append(getDocContent(id))
 
     return docList
