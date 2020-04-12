@@ -88,3 +88,27 @@ a {
   color: white;
   text-decoration: none;
 }
+.selections{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column-gap: 10px;
+  width: 10%;
+  flex-flow: row wrap;
+  align-items: center;
+}
+
+.selection{
+  color: #e67c30;
+  background: none;
+  height: 40px;
+  border-color: #e67c30;
+  border-radius: 25px;
+  background: #1c525c;
+  /*color: white;*/
+  font-size: 1em;
+  padding: 10px;
+}
+
+.selection:focus{
+  outline: 0;
+}

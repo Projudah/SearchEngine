@@ -21,7 +21,18 @@ def search_bar(query=''):
 <form class="formInline" method="get" action="">
 	<input class = "searchBar" type="text" name="query" value="%s" placeholder="Enter a Search Query">
 	<input class = "searchButton" type="submit" value="Search">
-</form>''' % query
+<div class="selections">
+<select id="searchType" class='selection' name="searchType">
+    <option value="boolean">Boolean Model</option>
+    <option value="vsm">Vector Space Model</option>
+</select>
+<select id="collectionType" class='selection' name="collectionType">
+    <option value="uofo">UofO Corpus</option>
+    <option value="reuters">Reuters</option>
+    </select>
+</div>
+</form>
+''' % query
 
 
 def get_content_type(pathInfo):
@@ -84,7 +95,7 @@ def post(env, resp):
 
 
 def generate_results(query):
-    idList, _ = main.query(query)
+    idList = main.query(query)
     result = access.getAllDocs(idList)
     resultclass = "aResult"
     resulttitle = resultclass+"_title"

@@ -59,9 +59,9 @@ def generateInvertedIndex():
 
 def generateBigrams(term, leftStart=True, rightStart=True):
     if leftStart:
-        term = ' '+term
+        term = '+'+term
     if rightStart:
-        term = term+' '
+        term = term+'+'
 
     bigrams = []
     for index in range(1, len(term)):
