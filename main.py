@@ -9,6 +9,23 @@ WILD = '*'
 LEFTBRACKET = '('
 RIGHTBRACKET = ')'
 
+relevant = {}
+
+def toggleRelevance(query, id):
+    if query in relevant:
+        if id in relevant[query]:
+            relevant[query].remove(id)
+        else:
+            relevant[query].append(id)
+    else:
+        relevant[query] = [id]
+
+def isRelevant(query, id):
+    if query in relevant:
+        if id in relevant[query]:
+            return True
+    return False
+
 
 def addPostMergeBrackets(array, join=AND[1]):
     if len(array) is 1:

@@ -67,16 +67,41 @@ body {
   padding-left: 20px;
 }
 
-.aResult_div {
-  padding: 2px 20px;
+.resultContainer {
+  display: grid;
+  grid-template-columns: 5fr 1fr;
+  grid-column-gap: 10px;
+  flex-flow: row wrap;
+  align-items: center;
   border-bottom-color: #e67c30;
   border-bottom-style: solid;
   border-width: 1px;
+  align-items: center;
+}
+.aResult_div{
+  padding: 2px 20px;
 }
 
 .aResult_div:hover {
   cursor: pointer;
   background: #e67c30;
+}
+
+.mark, .unmark{
+  display: inline-flex;
+  height: 100%;
+  display: grid;
+  align-items: center;
+  text-align: center;
+}
+
+.mark:hover, .unmark:hover{
+  background: #2a7482;
+  cursor: pointer;
+}
+
+.unmark{
+  background: #4d8053;
 }
 
 a {
@@ -132,4 +157,10 @@ a {
 }
 .aSuggest:hover{
   background: #e67c30;
+  cursor: pointer;
+}
+
+#expansion:hover{
+  cursor: pointer;
+  color: #e67c30;
 }

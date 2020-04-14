@@ -22,7 +22,8 @@ import os.path
 from bs4 import BeautifulSoup
 
 # folder for corpus
-folder = 'corpus/'
+folder1 = 'uoCorpus/'
+folder2 = 'reutersCorpus/'
 
 
 def pre_process_UO_courses():
@@ -80,15 +81,50 @@ def pre_process_UO_courses():
     #     for i in range(len(docIds)):
     #         newRow = [docIds[i], titles[i], descriptions[i]]
     #         writer.writerow(newRow)
-    os.mkdir(folder)
+    os.mkdir(folder1)
     for id, aTitle, desc in zip(docIds, titles, descriptions):
         if isEnglish(id):
-            filename = folder+id+'.json'
+            filename = folder1+id+'.json'
             content = [id, aTitle, aTitle+' '+desc.strip()]
             with open(filename, 'w+') as f:
                 json.dump(content, f)
 
 # returns true if course code is french
+
+def pre_processing_rueters():
+    docIds = []
+    titles = []
+    descriptions = []
+    startIndex = 0
+
+    files = os.path.join(os.getcwd(), "Data/reuters")
+
+    for filename in os.listdir(files):
+         with open(os.path.join(files, filename), 'rb') as file:
+            data = file.read()
+            soup = BeautifulSoup(data, "html.parser")
+            articles = soup.find_all('reuters')
+
+            for index, article in enumerate(articles, 1):
+                title = article.find('title').text if article.find(
+                    'title') is not None else ""
+                description = article.find('body').text if article.find(
+                    'body') is not None else ""
+
+                docIds.append(index + startIndex)
+                titles.append(title)
+                descriptions.append(description)
+
+            startIndex += 1000
+
+    os.mkdir(folder2)
+    for id, aTitle, desc in zip(docIds, titles, descriptions):
+        filename = folder2+str(id)+'.json'
+        content = [id, aTitle, aTitle+' '+desc.strip()]
+        with open(filename, 'w+') as f:
+            json.dump(content, f)
+
+
 
 
 def isEnglish(id):
@@ -100,8 +136,11 @@ def isEnglish(id):
 
 def run():
     # check to make sure the data has not already been parsed
-    if not os.path.exists(folder):
+    if not os.path.exists(folder1):
         pre_process_UO_courses()
+
+    if not os.path.exists(folder2):
+        pre_processing_rueters()
 
 
 run()

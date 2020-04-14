@@ -3,6 +3,7 @@ import cgi
 from wsgiref.simple_server import make_server
 import webbrowser
 import access
+from urllib.parse import parse_qs
 
 port = 8080
 website = "http://localhost:"+str(port)
@@ -42,6 +43,24 @@ el = document.getElementById('searchInput');
 el.value = text;
 document.getElementById('mainSearch').submit()
 }
+
+function toggleRelevance(el){
+id = el.id;
+query = document.getElementById('searchInput').value;
+encoded = encodeURI(query)
+var xhttp = new XMLHttpRequest();
+xhttp.open("POST", "", true);
+xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+xhttp.send("relevantquery="+encoded+"&id="+id);
+
+if(el.className == 'unmark'){
+el.className = 'mark'
+el.innerHTML = 'Mark Relevant'
+}else{
+el.className = 'unmark'
+el.innerHTML = 'Unmark Relevant'
+}
+}
 </script>
 </html>'''
 
@@ -50,7 +69,7 @@ def search_bar(query=''):
     expansion = None
     if query is not '':
         expansion = main.globalExpand(query)
-    suggestion = '''<h2>Suggestions</h2><p onclick="expand(this)">%s</p>''' % (expansion) if expansion else ''
+    suggestion = '''<h2>Suggestions</h2><p onclick="expand(this)" id='expansion'>%s</p>''' % (expansion) if expansion else ''
     bar = '''<h1 id="title">Searchify</h1>
 <form id="mainSearch" class="formInline" method="get" action="">
 <div id='searchdiv'>
@@ -123,14 +142,20 @@ def generateContent(title):
     return "<h2>%s | %s</h2><div>%s</div>" % (cont[access.ID], cont[access.TITLE], cont[access.FULL])
 
 def post(env, resp):
-    post_env = env.copy()
-    post_env['QUERY_STRING'] = ''
-    post = cgi.FieldStorage(
-        fp=env['wsgi.input'],
-        environ=post_env,
-        keep_blank_values=True
-    )
-    return generateSuggestions(post['query'].value)
+    try:
+        request_body_size = int(env.get('CONTENT_LENGTH', 0))
+    except (ValueError):
+        request_body_size = 0
+
+    request_body = env['wsgi.input'].read(request_body_size)
+    post = parse_qs(request_body)
+    if b'query' in post:
+        return generateSuggestions(post[b'query'].decode("utf-8"))
+    elif b'relevantquery' in post:
+        query = post[b'relevantquery'][0].decode("utf-8")
+        id = post[b'id'][0].decode("utf-8")
+        main.toggleRelevance(query, id)
+    return ''
 
 def generateSuggestions(query):
     sugs = main.complete(query)
@@ -148,16 +173,21 @@ def generate_results(query):
     resultdiv = resultclass + "_div"
 
     html = "<div class='%s'>" % resultclass
+    relevantToggle = '''<div onclick='toggleRelevance(this)' id='%s' class='%s'>%s</div>'''
 
     for item in result:
+        rel = main.isRelevant(query, item[access.ID])
+        relevantButton = relevantToggle % (item[access.ID], 'unmark' if rel else 'mark', 'Unmark Relevant' if rel else 'Mark Relevant')
         link = '?title='+item[access.ID]
-        itemHtml = "<a href='%s'><div class='%s' >" \
-                   "<h2 class='%s'> %s </h2>" \
-                   "<p class='%s'> %s </p>" \
-                   "</div></a>" % (link, resultdiv, resulttitle,
+        itemHtml = '''<a href='%s'><div class='%s' >
+                   <h2 class='%s'> %s </h2>
+                   <p class='%s'> %s </p>
+                   </div></a>''' % (link, resultdiv, resulttitle,
                                    item[access.TITLE], resultcontent, item[access.EX])
+        itemHtml = '<div class="resultContainer">'+itemHtml+relevantButton+'</div>'
         html += itemHtml
-    return html
+    return html + '</div>'
+
 
 def start():
     webbrowser.open_new(website)
