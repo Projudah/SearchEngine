@@ -24,12 +24,34 @@ def build(id, document):
 
     return result, rawResult
 
+def buildRaw(id, document):
+    tokens = parseAllWords(document)
+
+    return tokens
+
 
 def normalize(token):
     # print('old:', token)
     token = token.replace('.', '')
     token = token.replace('-', ' ').strip()
     return nltk.word_tokenize(token)[0] if token != '' else ''
+
+def parseAllWords(words):
+    tokens = nltk.word_tokenize(words)
+
+    tokens = [word.lower() for word in tokens]
+
+    tokens = [word.replace('.', '') for word in tokens]
+
+    tokens = [word.replace(')', '') for word in tokens]
+
+    tokens = [word.replace('(', '') for word in tokens]
+
+    tokens = [word.replace(',', '') for word in tokens]
+
+    tokens = [word.replace(' ', '-') for word in tokens]
+
+    return tokens
 
 
 def parseWords(words):

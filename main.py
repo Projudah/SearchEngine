@@ -174,14 +174,103 @@ class Term:
         if self.isBigram:
             # print(self.string)
             return processing.retrieveGram(self.string)
-        token = dictionary.parseWords(self.string)[0][0]
+        ret = dictionary.parseWords(self.string)[0]
+        token = ret[0] if len(ret) >0 else None
         return self.convertToArray(processing.retrieve(token))
 
 def query(query):
     return Query(query).result()
+
+def score(word, prevword, id):
+    data = processing.getLMBigram(id)
+
+    if not prevword:
+        if word in data:
+            return data[word][processing.COUNT]/data[processing.nullkey]
+    else:
+        if word in data and prevword in data:
+            bigram = prevword+' '+word
+            if bigram in data[prevword][processing.BIGRAMS]:
+                score = data[prevword][processing.BIGRAMS][bigram]
+                totPrev = data[prevword][processing.COUNT]
+                return score/totPrev
+    return 0
+
+def getSuggestion(queryList, id, exclude=[]):
+    lm = processing.getLMBigram(id)
+    possibleWords = lm[queryList[-1]] if queryList[-1] in lm else None
+    if possibleWords:
+        bestword = None
+        bestscore = None
+        possibleWords = possibleWords[processing.BIGRAMS].keys()
+        for posWord in possibleWords:
+            posWord = posWord.split(' ')[1]
+            scorelist = queryList + [posWord]
+            runningScore = 1
+            prevWord = None
+            for word in scorelist:
+                runningScore *= score(word, prevWord, id)
+                prevWord = word
+            # print(posWord, runningScore)
+            if posWord not in exclude:
+                bestword = bestword if bestscore and runningScore <= bestscore else posWord
+                bestscore = bestscore if bestscore and runningScore <= bestscore else runningScore
+        return bestword if bestscore else None
+    return None
+
+def cycleCompletion(n, query, id):
+    wList = dictionary.parseAllWords(query)
+    length = len(wList)
+    result = []
+
+    for i in range(n):
+        step = 0
+        #going forward
+        word = None
+        while not word and step < length:
+            word = getSuggestion(wList[step:], id, result)
+            step += 1
+
+        #going backward
+        step = length-1
+        while not word and step > 0:
+            word = getSuggestion(wList[:step], id, result)
+            step -= 1
+
+        add = [word] if word else []
+        result += add
+
+    return result
+
+def complete(queryStr):
+    results = query(queryStr)[:5]
+    suggestions =[]
+    num = len(results)
+
+    if num is 5:
+        for res in results:
+            suggestions += cycleCompletion(1, queryStr, res)
+    elif num is 4:
+        suggestions += cycleCompletion(2, queryStr, results[0])
+        suggestions += cycleCompletion(1, queryStr, results[1])
+        suggestions += cycleCompletion(1, queryStr, results[2])
+        suggestions += cycleCompletion(1, queryStr, results[3])
+    elif num is 3:
+        suggestions += cycleCompletion(2, queryStr, results[0])
+        suggestions += cycleCompletion(2, queryStr, results[1])
+        suggestions += cycleCompletion(1, queryStr, results[2])
+    elif num is 2:
+        suggestions += cycleCompletion(3, queryStr, results[0])
+        suggestions += cycleCompletion(2, queryStr, results[1])
+    elif num is 1:
+        suggestions += cycleCompletion(5, queryStr, results[0])
+    return list(set(suggestions))
+
+
+
 if __name__ == '__main__':
     # q = Query('su*ort')
-    # print(q.result())
+    # print(complete('computer'))
     # print(expand('(*ge AND_NOT (man* OR health*))'))
     # print(query('ps*logy'))
     interface.start()

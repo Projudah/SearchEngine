@@ -13,14 +13,41 @@ begin = '''<html>
 </head>
 <body>'''
 
-end = '''</body></html>'''
+end = '''</body>
+<script>
+function fill(sug){
+var text = sug.innerHTML
+el = document.getElementById('searchInput');
+el.value = text;
+getsuggestion();
+}
+function getsuggestion(){
+var xhttp = new XMLHttpRequest();
+xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("suggestions").innerHTML = this.responseText;
+    }
+  };
+el = document.getElementById('searchInput');
+encoded = encodeURI(el.value)
+xhttp.open("POST", "", true);
+xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+xhttp.send("query="+encoded);
+document.getElementById("suggestions").innerHTML = 'Loading...'
+}
+</script>
+</html>'''
 
 
 def search_bar(query=''):
     return '''<h1 id="title">Searchify</h1>
 <form class="formInline" method="get" action="">
-	<input class = "searchBar" type="text" name="query" value="%s" placeholder="Enter a Search Query">
+<div id='searchdiv'>
+	<input autocomplete="off" id='searchInput' list="suggestions" oninput="getsuggestion()" class = "searchBar" type="text" name="query" value="%s" placeholder="Enter a Search Query">
+	<div id="suggestions">
+    </div>
 	<input class = "searchButton" type="submit" value="Search">
+</div>
 <div class="selections">
 <select id="searchType" class='selection' name="searchType">
     <option value="boolean">Boolean Model</option>
@@ -51,12 +78,13 @@ def app(environ, start_response):
     if get_content_type(environ['PATH_INFO']) == "text/css":
         response = read_static_content(environ['PATH_INFO'])
     else:
-        response = begin
+        response = ''
         if environ['REQUEST_METHOD'] == 'POST':
             response += post(environ, start_response)
         elif environ['REQUEST_METHOD'] == 'GET':
+            response = begin
             response += get(environ, start_response)
-        response += end
+            response += end
     start_response(
         '200 OK', [('Content-Type', get_content_type(environ['PATH_INFO']))])
     return [response.encode("utf-8")]
@@ -82,7 +110,6 @@ def generateContent(title):
     cont = access.getDocContent(title)
     return "<h2>%s | %s</h2><div>%s</div>" % (cont[access.ID], cont[access.TITLE], cont[access.FULL])
 
-
 def post(env, resp):
     post_env = env.copy()
     post_env['QUERY_STRING'] = ''
@@ -91,8 +118,14 @@ def post(env, resp):
         environ=post_env,
         keep_blank_values=True
     )
-    return generate_results(post['query'])
+    return generateSuggestions(post['query'].value)
 
+def generateSuggestions(query):
+    sugs = main.complete(query)
+    suggestions = ''
+    for data in sugs:
+        suggestions += '<div class="aSuggest" onclick="fill(this)">'+query.strip()+' '+data+'</div>'
+    return suggestions
 
 def generate_results(query):
     idList = main.query(query)
@@ -113,16 +146,6 @@ def generate_results(query):
                                    item[access.TITLE], resultcontent, item[access.EX])
         html += itemHtml
     return html
-
-
-def selector():
-    return '''<select id="model">
-  <option value="volvo">Boolean Model</option>
-  <option value="saab">VSM Model</option>
-  <option value="opel">Opel</option>
-  <option value="audi">Audi</option>
-</select>'''
-
 
 def start():
     webbrowser.open_new(website)

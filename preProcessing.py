@@ -84,7 +84,7 @@ def pre_process_UO_courses():
     for id, aTitle, desc in zip(docIds, titles, descriptions):
         if isEnglish(id):
             filename = folder+id+'.json'
-            content = [id, aTitle, desc.strip()]
+            content = [id, aTitle, aTitle+' '+desc.strip()]
             with open(filename, 'w+') as f:
                 json.dump(content, f)
 

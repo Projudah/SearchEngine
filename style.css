@@ -24,12 +24,7 @@ body {
 }
 
 .formInline {
-  display: grid;
-  grid-template-columns: 8fr 1fr;
-  grid-column-gap: 10px;
   width: 100%;
-  flex-flow: row wrap;
-  align-items: center;
 }
 
 #title {
@@ -111,4 +106,30 @@ a {
 
 .selection:focus{
   outline: 0;
+}
+#searchdiv{
+  position: relative;
+  display: grid;
+  grid-template-columns: 8fr 1fr;
+  grid-column-gap: 10px;
+  width: 100%;
+  flex-flow: row wrap;
+  align-items: center;
+}
+#suggestions{
+  position: absolute;
+  width: 100%;
+  top: 100%;
+  background: #2a7482;
+  border-radius: 25px;
+}
+.aSuggest{
+  padding: 10px;
+  margin: 10px;
+  border: solid 1px;
+  border-color: #e67c30;
+  border-radius: 25px;
+}
+.aSuggest:hover{
+  background: #e67c30;
 }
