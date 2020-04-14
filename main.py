@@ -9,24 +9,25 @@ WILD = '*'
 LEFTBRACKET = '('
 RIGHTBRACKET = ')'
 
+
+def addPostMergeBrackets(array, join=AND[1]):
+    if len(array) is 1:
+        return array[0]
+    else:
+        center = len(array) // 2
+        left = addPostMergeBrackets(array[:center], join)
+        right = addPostMergeBrackets(array[center:], join)
+        result = LEFTBRACKET + left + join + right + RIGHTBRACKET
+        return result
+
 class Query:
     def __init__(self, queryString, isBigram=False):
         self.queryString = queryString
         self.isBigram = isBigram
         if isBigram:
-            self.queryString = self.addPostMergeBrackets(queryString.split(' '))
+            self.queryString = addPostMergeBrackets(queryString.split(' '))
             # print('BIGRAM!:',self.queryString)
         self.queryObject = self.parse(self.queryString)
-
-    def addPostMergeBrackets(self, array, join=AND[1]):
-        if len(array) is 1:
-            return array[0]
-        else:
-            center = len(array)//2
-            left = self.addPostMergeBrackets(array[:center])
-            right = self.addPostMergeBrackets(array[center:])
-            result = LEFTBRACKET + left + join + right + RIGHTBRACKET
-            return result
 
 
     def getBooleanType(self, term):
@@ -108,7 +109,7 @@ class Query:
     def result(self):
         if self.isBigram:
             results = self.queryObject.result()
-            resultsString = self.addPostMergeBrackets(results, join=OR[1])
+            resultsString = addPostMergeBrackets(results, join=OR[1])
             return Query(resultsString).result()
         return self.queryObject.result()
 
@@ -179,7 +180,7 @@ class Term:
         return self.convertToArray(processing.retrieve(token))
 
 def query(query):
-    return Query(query).result()
+    return Query(query.strip(' () ')).result()
 
 def score(word, prevword, id):
     data = processing.getLMBigram(id)
@@ -243,12 +244,12 @@ def cycleCompletion(n, query, id):
     return result
 
 def complete(queryStr):
-    results = query(queryStr)[:5]
+    results = query(queryStr)
     suggestions =[]
     num = len(results)
 
-    if num is 5:
-        for res in results:
+    if num >= 5:
+        for res in results[:5]:
             suggestions += cycleCompletion(1, queryStr, res)
     elif num is 4:
         suggestions += cycleCompletion(2, queryStr, results[0])
@@ -266,11 +267,32 @@ def complete(queryStr):
         suggestions += cycleCompletion(5, queryStr, results[0])
     return list(set(suggestions))
 
+def synsAndHyps(word):
+    syns, hyps = dictionary.getSynsHyps(word)
+    expansion = syns[:3] + hyps[:2]
+    return addPostMergeBrackets(expansion, join=OR[1])
+
+def hasBool(string):
+    if AND_NOT[0] in string: return True
+    if OR[0] in string: return True
+    if AND[0] in string: return True
+    return False
+
+def globalExpand(queryStr):
+    if hasBool(queryStr): return None
+    split = dictionary.parseAllWords(queryStr)
+    newQuery = []
+    for word in split:
+        newQuery += [synsAndHyps(word)]
+        print(word, newQuery)
+    return addPostMergeBrackets(newQuery) #join default to AND
+
+
 
 
 if __name__ == '__main__':
     # q = Query('su*ort')
-    # print(complete('computer'))
+    # print(globalExpand('computer systems'))
     # print(expand('(*ge AND_NOT (man* OR health*))'))
     # print(query('ps*logy'))
     interface.start()

@@ -6,6 +6,8 @@ from nltk.corpus import stopwords
 nltk.download('wordnet')
 nltk.download('stopwords')
 # nltk.download()
+from nltk.corpus import wordnet
+
 
 porterStem = PorterStemmer()
 
@@ -72,3 +74,16 @@ def parseWords(words):
     tokens = [porterStem.stem(t) for t in tokens]
 
     return tokens, nonstemmed
+
+def getSynsHyps(word):
+    synonyms = [word]
+    hypernyms = []
+
+    for syn in wordnet.synsets(word):
+        for l in syn.lemmas():
+            synonyms.append(l.name())
+        for l in syn.hypernyms():
+            hypernyms.append(l.lemmas()[0].name())
+
+
+    return synonyms, hypernyms

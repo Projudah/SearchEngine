@@ -35,13 +35,24 @@ xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 xhttp.send("query="+encoded);
 document.getElementById("suggestions").innerHTML = 'Loading...'
 }
+
+function expand(el){
+var text = el.innerHTML
+el = document.getElementById('searchInput');
+el.value = text;
+document.getElementById('mainSearch').submit()
+}
 </script>
 </html>'''
 
 
 def search_bar(query=''):
-    return '''<h1 id="title">Searchify</h1>
-<form class="formInline" method="get" action="">
+    expansion = None
+    if query is not '':
+        expansion = main.globalExpand(query)
+    suggestion = '''<h2>Suggestions</h2><p onclick="expand(this)">%s</p>''' % (expansion) if expansion else ''
+    bar = '''<h1 id="title">Searchify</h1>
+<form id="mainSearch" class="formInline" method="get" action="">
 <div id='searchdiv'>
 	<input autocomplete="off" id='searchInput' list="suggestions" oninput="getsuggestion()" class = "searchBar" type="text" name="query" value="%s" placeholder="Enter a Search Query">
 	<div id="suggestions">
@@ -60,6 +71,7 @@ def search_bar(query=''):
 </div>
 </form>
 ''' % query
+    return bar+suggestion
 
 
 def get_content_type(pathInfo):
