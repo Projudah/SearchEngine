@@ -7,11 +7,7 @@ from similarity.weighted_levenshtein import WeightedLevenshtein
 from similarity.weighted_levenshtein import CharacterSubstitutionInterface
 
 #open dictionary
-with open('invertedIndex.dat') as json_file:
-    invertedIndex = json.load(json_file)
 
-#dict of terms
-invertedIndex = invertedIndex.keys()
 
 #class to change the weights of the
 class CharacterSubstitution(CharacterSubstitutionInterface):
@@ -23,10 +19,14 @@ class CharacterSubstitution(CharacterSubstitutionInterface):
 weighted_levenshtein = WeightedLevenshtein(CharacterSubstitution())
 
 
-def getMatches(query):
+def getMatches(query, collection):
+    with open(collection+'allTerms.dat') as json_file:
+        allterms = json.load(json_file)
+
+    # dict of terms
     best_matches = ['','','','','']
     best_matches_distances = [999,999,999,999,999]
-    for term in invertedIndex: #iterate through terms
+    for term in allterms: #iterate through terms
         if term != "":
             if term[0] == query[0]: #people very rarely get the first letter wrong, limit the search to  words starting with the same letter
                 distance = weighted_levenshtein.distance(query, term) #find weighted distance of the term and query
@@ -37,7 +37,7 @@ def getMatches(query):
                         best_matches[i] = term
                         break
 
-    return best_matches
+    return best_matches, best_matches_distances
 
 
 

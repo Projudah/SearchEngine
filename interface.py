@@ -30,10 +30,13 @@ xhttp.onreadystatechange = function() {
     }
   };
 el = document.getElementById('searchInput');
+stype = document.getElementById('searchType').value;
+ctype = document.getElementById('collectionType').value;
+
 encoded = encodeURI(el.value)
 xhttp.open("POST", "", true);
 xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-xhttp.send("query="+encoded);
+xhttp.send("query="+encoded+"&collectionType="+ctype+"&searchType="+stype);
 document.getElementById("suggestions").innerHTML = 'Loading...'
 }
 
@@ -65,8 +68,13 @@ el.innerHTML = 'Unmark Relevant'
 </html>'''
 
 
-def search_bar(query=''):
+def search_bar(query='', type=None, coll=None, spell=False):
     expansion = None
+    didYouMean = ''
+    if spell:
+        potential = main.Query(query, coll, type).checkSpelling()
+        if potential != query:
+            didYouMean = '''<p>Did You Mean:</p><p onclick="expand(this)" id='correction'>%s</p>''' % (potential)
     if query is not '':
         expansion = main.globalExpand(query)
     suggestion = '''<h2>Suggestions</h2><p onclick="expand(this)" id='expansion'>%s</p>''' % (expansion) if expansion else ''
@@ -90,7 +98,7 @@ def search_bar(query=''):
 </div>
 </form>
 ''' % query
-    return bar+suggestion
+    return bar+suggestion+didYouMean
 
 
 def get_content_type(pathInfo):
@@ -130,15 +138,18 @@ def get(env, resp):
                                     keep_blank_values=True)
         if 'query' in formData:
             query = formData['query'].value
-            return search_bar(query)+generate_results(query)
+            type = formData['searchType'].value
+            coll = formData['collectionType'].value
+            return search_bar(query, type, coll, spell=True)+generate_results(query, type, coll)
 
         if 'title' in formData:
             title = formData['title'].value
-            return generateContent(title)
+            coll = formData['collectionType'].value
+            return generateContent(title, coll)
 
 
-def generateContent(title):
-    cont = access.getDocContent(title)
+def generateContent(title, coll):
+    cont = access.getDocContent(title, coll)
     return "<h2>%s | %s</h2><div>%s</div>" % (cont[access.ID], cont[access.TITLE], cont[access.FULL])
 
 def post(env, resp):
@@ -150,23 +161,23 @@ def post(env, resp):
     request_body = env['wsgi.input'].read(request_body_size)
     post = parse_qs(request_body)
     if b'query' in post:
-        return generateSuggestions(post[b'query'].decode("utf-8"))
+        return generateSuggestions(post[b'query'][0].decode("utf-8"), post[b'collectionType'][0].decode("utf-8"), post[b'searchType'][0].decode("utf-8"))
     elif b'relevantquery' in post:
         query = post[b'relevantquery'][0].decode("utf-8")
         id = post[b'id'][0].decode("utf-8")
         main.toggleRelevance(query, id)
     return ''
 
-def generateSuggestions(query):
-    sugs = main.complete(query)
+def generateSuggestions(query, coll, type):
+    sugs = main.complete(query, coll, type)
     suggestions = ''
     for data in sugs:
         suggestions += '<div class="aSuggest" onclick="fill(this)">'+query.strip()+' '+data+'</div>'
     return suggestions
 
-def generate_results(query):
-    idList = main.query(query)
-    result = access.getAllDocs(idList)
+def generate_results(query, type, coll):
+    idList = main.query(query, coll, type)
+    result = access.getAllDocs(idList, coll, type)
     resultclass = "aResult"
     resulttitle = resultclass+"_title"
     resultcontent = resultclass + "_content"
@@ -178,7 +189,7 @@ def generate_results(query):
     for item in result:
         rel = main.isRelevant(query, item[access.ID])
         relevantButton = relevantToggle % (item[access.ID], 'unmark' if rel else 'mark', 'Unmark Relevant' if rel else 'Mark Relevant')
-        link = '?title='+item[access.ID]
+        link = '?title='+item[access.ID]+'&collectionType='+coll
         itemHtml = '''<a href='%s'><div class='%s' >
                    <h2 class='%s'> %s </h2>
                    <p class='%s'> %s </p>

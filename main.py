@@ -1,6 +1,8 @@
 import interface
 import processing
 import dictionary
+import argparse
+import spellingCorrection
 
 AND = ['AND', ' AND ']
 OR = ['OR', ' OR ']
@@ -38,13 +40,18 @@ def addPostMergeBrackets(array, join=AND[1]):
         return result
 
 class Query:
-    def __init__(self, queryString, isBigram=False):
+    def __init__(self, queryString, coll, type, isBigram=False):
         self.queryString = queryString
         self.isBigram = isBigram
+        self.collection = coll
+        self.type = type
         if isBigram:
             self.queryString = addPostMergeBrackets(queryString.split(' '))
             # print('BIGRAM!:',self.queryString)
         self.queryObject = self.parse(self.queryString)
+
+    def checkSpelling(self):
+        return self.queryObject.checkSpelling()
 
 
     def getBooleanType(self, term):
@@ -82,18 +89,18 @@ class Query:
             # separated into different statements for readability
             if side is 0:
                 right = parsed
-                left = Term(term, self.isBigram)
+                left = Term(term, self.collection, self.type, self.isBigram)
             else:
                 left = parsed
-                right = Term(term, self.isBigram)
+                right = Term(term, self.collection, self.type,  self.isBigram)
         else:
             type = self.getBooleanType(subQuery)
             if type:
                 split = subQuery.split(type)
-                left = Term(split[0].strip(), self.isBigram)
-                right = Term(split[1].strip(), self.isBigram)
+                left = Term(split[0].strip(), self.collection, self.type, self.isBigram)
+                right = Term(split[1].strip(), self.collection, self.type, self.isBigram)
             else:
-                left = Term(subQuery, False)
+                left = Term(subQuery, self.collection, self.type, False)
         return SubQuery(subQuery, left, right, type)
 
     def parse(self, query):
@@ -127,7 +134,7 @@ class Query:
         if self.isBigram:
             results = self.queryObject.result()
             resultsString = addPostMergeBrackets(results, join=OR[1])
-            return Query(resultsString).result()
+            return Query(resultsString, self.collection, self.type).result()
         return self.queryObject.result()
 
 class SubQuery:
@@ -147,6 +154,10 @@ class SubQuery:
     def andQuery(self):
         return list(set(self.leftSide.result()) & set(self.rightSide.result()))
 
+    def checkSpelling(self):
+        if self.leftSide and self.rightSide:
+            return LEFTBRACKET + self.leftSide.checkSpelling() +' ' +self.booleanType+' '+ self.rightSide.checkSpelling() + RIGHTBRACKET
+        return self.leftSide.checkSpelling() if self.leftSide else self.rightSide.checkSpelling()
 
     def result(self):
         if self.leftSide and self.rightSide:
@@ -159,10 +170,13 @@ class SubQuery:
         return self.leftSide.result() if self.leftSide else self.rightSide.result()
 
 class Term:
-    def __init__(self, string, isBigram=False):
+    def __init__(self, string, collection, type, isBigram=False):
         self.string = string
         self.isWildCard = WILD in self.string
         self.isBigram = isBigram
+        self.coll = collection
+        self.collection = processing.uoIndexes if collection == 'uofo' else processing.reutIndexes
+        self.type = type
 
     def expand(self):
         querySplit = self.string.split(WILD)
@@ -182,22 +196,32 @@ class Term:
             arr.append(doc[processing.ID])
         return arr
 
+    def checkSpelling(self):
+        choices, scores = spellingCorrection.getMatches(self.string, self.collection)
+        minim = min(scores)
+        closest = choices[scores.index(minim)]
+
+        if minim < 2:
+            return closest
+        return self.string
+
+
     def result(self):
 
         if self.isWildCard:
             # print('wildcard:', self.string)
             expandedBigram = self.expand()
             # print(expandedBigram)
-            return Query(expandedBigram, isBigram=True).result()
+            return Query(expandedBigram, self.coll, self.type, isBigram=True).result()
         if self.isBigram:
             # print(self.string)
-            return processing.retrieveGram(self.string)
+            return processing.retrieveGram(self.string, self.collection)
         ret = dictionary.parseWords(self.string)[0]
         token = ret[0] if len(ret) >0 else None
-        return self.convertToArray(processing.retrieve(token))
+        return self.convertToArray(processing.retrieve(token, self.collection))
 
-def query(query):
-    return Query(query.strip(' () ')).result()
+def query(query, coll, type):
+    return Query(query.strip(' () '), coll, type).result()
 
 def score(word, prevword, id):
     data = processing.getLMBigram(id)
@@ -260,8 +284,8 @@ def cycleCompletion(n, query, id):
 
     return result
 
-def complete(queryStr):
-    results = query(queryStr)
+def complete(queryStr, coll, type):
+    results = query(queryStr, coll, type)
     suggestions =[]
     num = len(results)
 
@@ -301,13 +325,29 @@ def globalExpand(queryStr):
     newQuery = []
     for word in split:
         newQuery += [synsAndHyps(word)]
-        print(word, newQuery)
-    return addPostMergeBrackets(newQuery) #join default to AND
-
+    return addPostMergeBrackets(newQuery)[1:-1] #join default to AND
 
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-p', '--nostop', action='store_true',
+                        help="no stop words removal if true")
+    parser.add_argument('-m', '--nostem', action='store_true',
+                        help="no word stemming if true")
+    parser.add_argument('-n', '--nonorm', action='store_true',
+                        help="no word normalization if true")
+
+    args = parser.parse_args()
+
+    if args.nostop: processing.stop = False
+    if args.nostem: processing.stem = False
+    if args.nonorm: processing.norm = False
+
+    processing.process()
+
     # q = Query('su*ort')
     # print(globalExpand('computer systems'))
     # print(expand('(*ge AND_NOT (man* OR health*))'))

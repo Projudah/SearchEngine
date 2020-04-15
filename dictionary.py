@@ -12,9 +12,10 @@ from nltk.corpus import wordnet
 porterStem = PorterStemmer()
 
 
-def build(id, document):
+
+def build(id, document, stop=True, stem=True, norm=True):
     # tokenize
-    tokens, nonstemed = parseWords(document)
+    tokens, nonstemed = parseWords(document, stop, stem, norm)
 
     # convert to dictionary, remove duplicates
     result = {}
@@ -43,35 +44,27 @@ def parseAllWords(words):
 
     tokens = [word.lower() for word in tokens]
 
-    tokens = [word.replace('.', '') for word in tokens]
-
-    tokens = [word.replace(')', '') for word in tokens]
-
-    tokens = [word.replace('(', '') for word in tokens]
-
-    tokens = [word.replace(',', '') for word in tokens]
-
-    tokens = [word.replace(' ', '-') for word in tokens]
+    tokens = [word.replace('.', '').replace(')', '').replace('(', '').replace(',', '').replace(' ', '-') for word in tokens ]
 
     return tokens
 
 
-def parseWords(words):
+def parseWords(words, stop=True, stem=True, norm=True):
     tokens = nltk.word_tokenize(words)
 
     # convert to lowercase
     tokens = [word.lower() for word in tokens]
 
     # Normalize
-    tokens = [normalize(t) for t in tokens if t != '']
+    if norm: tokens = [normalize(t) for t in tokens if t != '']
 
     # remove stop words
-    tokens = [t for t in tokens if t not in stopwords.words('english')]
+    if stop: tokens = [t for t in tokens if t not in stopwords.words('english')]
 
     nonstemmed = tokens.copy()
 
     # stem
-    tokens = [porterStem.stem(t) for t in tokens]
+    if stem: tokens = [porterStem.stem(t) for t in tokens]
 
     return tokens, nonstemmed
 

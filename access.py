@@ -6,20 +6,22 @@ EX = 'excerpt'
 TITLE = 'title'
 FULL = 'full'
 ID = 'id'
+NAME = 'name'
 
-def getDoc(id):
-    filename = preProcessing.folder+id+'.json'
+def getDoc(id, coll):
+    folder = preProcessing.folder1 if coll == 'uofo' else preProcessing.folder2
+    filename = folder+id+'.json'
     ret = 'Unavailable'
     try:
         with open(filename,'r') as f:
             ret = json.load(f)
     except:
-        print('File not found')
+        print('File not found',id,coll)
 
     return ret
 
-def getDocContent(id):
-    doc = getDoc(id)
+def getDocContent(id, coll):
+    doc = getDoc(id, coll)
     excerpt = doc[2][:CHARCOUNT]+'...'
     return {
         ID: id,
@@ -28,10 +30,10 @@ def getDocContent(id):
         FULL: doc[2]
     }
 
-def getAllDocs(idList):
+def getAllDocs(idList, coll, type):
     docList = []
     if idList:
         for id in idList:
-            docList.append(getDocContent(id))
+            docList.append(getDocContent(id, coll))
 
     return docList

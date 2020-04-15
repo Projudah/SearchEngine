@@ -10,39 +10,60 @@ WEIGHT = 'weight'
 COUNT = 'count'
 BIGRAMS = 'bigrams'
 
+uoIndexes = 'uoIndexes/'
+reutIndexes = 'reutersIndexes/'
 indexPath = 'invertedIndex.dat'
 bigramPath = 'bigramIndex.dat'
 lmPath = 'languageModel.dat'
+allPath = 'allTerms.dat'
 nullkey = '<null>'
 
+stop=True
+stem=True
+norm=True
 
-def getTerms(corpusPath, raw = False):
+
+def getTerms(corpusPath):
     docTerms = []
     rawTerms = []
-
-    for docPath in os.listdir(corpusPath):
+    fullTerms = []
+    fullIds = []
+    dirlist = os.listdir(corpusPath)
+    tot = len(dirlist)
+    count = 0
+    print('getting terms')
+    for docPath in dirlist:
+        id = docPath[:-5]
+        print((count/tot)*100,'%',end='\r')
+        count +=1
         with open(corpusPath+docPath, 'r') as f:
             doc = json.load(f)
 
-        if not raw:
-            docTerm, rawTerm = dictionary.build(doc[0], doc[2])
-            docTerms.append(docTerm)
-            rawTerms.append(rawTerm)
-        else:
-            term = dictionary.buildRaw(doc[0], doc[2])
-            docTerms.append(term)
-            rawTerms.append(doc[0])
-    return docTerms, rawTerms
+        docTerm, rawTerm = dictionary.build(id, doc[2], stop, stem, norm)
+        docTerms.append(docTerm)
+        rawTerms.append(rawTerm)
+        
+        term = dictionary.buildRaw(id, doc[2])
+        if len(term) >0:
+            fullTerms.append(term)
+            fullIds.append(id)
+    return docTerms, rawTerms, fullTerms, fullIds
 
 def calculateTermWeight():
     return 1
 
-def generateInvertedIndex():
-    termsList, rawList = getTerms('corpus/')
+def generateInvertedIndex(fileloc):
+    print('\n generating inverted index in', fileloc)
+    termsList, rawList, fullTerms, fullIds = getTerms(fileloc)
 
     invertedindex = {}
 
+    tot = len(termsList)
+    count = 0
+
     for doc in termsList:
+        print((count/tot)*100,'%',end='\r')
+        count += 1
         for docTerm in doc:
 
             if docTerm in invertedindex:
@@ -61,7 +82,10 @@ def generateInvertedIndex():
                     }]
                 }
     bigramIndex = generatebigramIndex(rawList)
-    return invertedindex, bigramIndex
+    lmModel = generateLanguageModel(fullTerms, fullIds)
+    allTerms = []
+    for t in fullTerms: allTerms += t
+    return invertedindex, bigramIndex, lmModel, allTerms
 
 def generateBigrams(term, leftStart=True, rightStart=True):
     if leftStart:
@@ -76,8 +100,13 @@ def generateBigrams(term, leftStart=True, rightStart=True):
     return bigrams
 
 def generatebigramIndex(termList):
+    print('bigram indexing...')
     bigramIndex = {}
+    tot = len(termList)
+    count = 0
     for doc in termList:
+        print((count / tot) * 100, '%', end='\r')
+        count += 1
         for term in doc:
             bigrams = generateBigrams(term)
 
@@ -89,8 +118,7 @@ def generatebigramIndex(termList):
                     bigramIndex[gram] = [term]
     return bigramIndex
 
-def generateLanguageModel():
-    termsList, ids = getTerms('corpus/', raw=True)
+def generateLanguageModel(termsList, ids):
 
     languageModel = {}
 
@@ -126,42 +154,69 @@ def generateLanguageModel():
 
 def process():
     # check to make sure the data has not already been parsed
-    if not os.path.exists(indexPath):
+    if not os.path.exists(uoIndexes):
+        os.mkdir(uoIndexes)
         preProcessing.run()
-        invertedIndex, bigramIndex = generateInvertedIndex()
+        invertedIndex, bigramIndex, lm, all = generateInvertedIndex('uoCorpus/')
 
-        with open(indexPath, 'w+') as f:
+        with open(uoIndexes+indexPath, 'w+') as f:
             json.dump(invertedIndex, f)
 
-        if not os.path.exists(bigramPath):
+        if not os.path.exists(uoIndexes+bigramPath):
 
-            with open(bigramPath, 'w+') as f:
+            with open(uoIndexes+bigramPath, 'w+') as f:
                 json.dump(bigramIndex, f)
 
-    if not os.path.exists(lmPath):
-        lm = generateLanguageModel()
-        with open(lmPath, 'w+') as f:
-            json.dump(lm, f)
+        if not os.path.exists(uoIndexes+lmPath):
+            with open(uoIndexes+lmPath, 'w+') as f:
+                json.dump(lm, f)
 
-def retrieve(term):
+        if not os.path.exists(uoIndexes+allPath):
+            with open(uoIndexes+allPath, 'w+') as f:
+                json.dump(all, f)
+
+    #REUTERS
+
+    if not os.path.exists(reutIndexes):
+        os.mkdir(reutIndexes)
+        preProcessing.run()
+        invertedIndex, bigramIndex, lm, all = generateInvertedIndex('reutersCorpus/')
+
+        with open(reutIndexes+indexPath, 'w+') as f:
+            json.dump(invertedIndex, f)
+
+        if not os.path.exists(reutIndexes+bigramPath):
+
+            with open(reutIndexes+bigramPath, 'w+') as f:
+                json.dump(bigramIndex, f)
+
+        if not os.path.exists(reutIndexes+lmPath):
+            with open(reutIndexes+lmPath, 'w+') as f:
+                json.dump(lm, f)
+
+        if not os.path.exists(reutIndexes+allPath):
+            with open(reutIndexes+allPath, 'w+') as f:
+                json.dump(all, f)
+
+def retrieve(term, corpus=uoIndexes):
     process()
-    with open(indexPath, 'r') as f:
+    with open(corpus+indexPath, 'r') as f:
         invertedIndex = json.load(f)
     if term in invertedIndex:
         return invertedIndex[term]
     return None  # {"N/a": {FREQ: 0, DOCS: []}}
 
-def retrieveGram(term):
+def retrieveGram(term, corpus=uoIndexes):
     process()
-    with open(bigramPath, 'r') as f:
+    with open(corpus+bigramPath, 'r') as f:
         bigramIndex = json.load(f)
     if term in bigramIndex:
         return bigramIndex[term]
     return None
 
-def getLMBigram(id):
+def getLMBigram(id, corpus=uoIndexes):
     process()
-    with open(lmPath, 'r') as f:
+    with open(corpus+lmPath, 'r') as f:
         lmBigramIndex = json.load(f)
     if id in lmBigramIndex:
             return lmBigramIndex[id]
@@ -169,5 +224,5 @@ def getLMBigram(id):
 
 
 
-process()
+# process()
 # print(generateBigrams('woody', rightStart=False))

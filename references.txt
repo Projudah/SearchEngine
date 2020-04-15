@@ -1,1 +1,2 @@
 https://eddmann.com/posts/understanding-python-wsgi-with-examples/
+https://pypi.org/project/strsim/#weighted-levenshtein

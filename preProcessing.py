@@ -27,11 +27,12 @@ folder2 = 'reutersCorpus/'
 
 
 def pre_process_UO_courses():
-
+    print('Pre-Processing UO courses')
     # initailizing arrays to be used to write csv
     docIds = []
     titles = []
     descriptions = []
+    names = []
 
     # import the UofO Course from the root directory
     coursesDocument = open("Data/UofO_Courses.html", encoding="utf8")
@@ -41,8 +42,12 @@ def pre_process_UO_courses():
 
     # create array of all the classes
     courses = soup.findAll("div", class_="courseblock")
+    tot = len(courses)
+    cnt = 0
 
     for course in courses:
+        print((cnt/tot)*100,'%',end='\r')
+        cnt +=1
         # parse the enirety of the Course Title from the HTML
         courseBlockTitle = course.find("p", class_="courseblocktitle noindent")
         # parse the Course Description from the HTML
@@ -69,8 +74,9 @@ def pre_process_UO_courses():
             description = description
 
         # anything which does not have "units" in the title must be a french class, or is not a class
-        if "units" in title:
-            docIds.append(docId)  # adding english ids
+        if "units" in title and isEnglish(docId):
+            names.append(docId)
+            docIds.append('uoCorpus'+str(cnt))  # adding english ids
             titles.append(title)  # adding english titles
             descriptions.append(description)  # adding english description
 
@@ -82,16 +88,16 @@ def pre_process_UO_courses():
     #         newRow = [docIds[i], titles[i], descriptions[i]]
     #         writer.writerow(newRow)
     os.mkdir(folder1)
-    for id, aTitle, desc in zip(docIds, titles, descriptions):
-        if isEnglish(id):
-            filename = folder1+id+'.json'
-            content = [id, aTitle, aTitle+' '+desc.strip()]
-            with open(filename, 'w+') as f:
-                json.dump(content, f)
+    for id, aTitle, desc, name in zip(docIds, titles, descriptions, names):
+        filename = folder1+id+'.json'
+        content = [name, aTitle, aTitle+' '+desc.strip()]
+        with open(filename, 'w+') as f:
+            json.dump(content, f)
 
 # returns true if course code is french
 
 def pre_processing_rueters():
+    print('\n Pre-Processing Reuters')
     docIds = []
     titles = []
     descriptions = []
@@ -99,23 +105,30 @@ def pre_processing_rueters():
 
     files = os.path.join(os.getcwd(), "Data/reuters")
 
+    cnt = 0
+    tot = len(os.listdir(files))
+
     for filename in os.listdir(files):
          with open(os.path.join(files, filename), 'rb') as file:
             data = file.read()
             soup = BeautifulSoup(data, "html.parser")
             articles = soup.find_all('reuters')
 
+            stot = len(articles)
             for index, article in enumerate(articles, 1):
+                subp = (index/stot) * 100
+                print(cnt,'/',tot, ':', subp, '%', end='\r')
                 title = article.find('title').text if article.find(
                     'title') is not None else ""
                 description = article.find('body').text if article.find(
                     'body') is not None else ""
 
-                docIds.append(index + startIndex)
+                docIds.append('reutersCorpus'+str(index + startIndex))
                 titles.append(title)
                 descriptions.append(description)
 
             startIndex += 1000
+            cnt += 1
 
     os.mkdir(folder2)
     for id, aTitle, desc in zip(docIds, titles, descriptions):
@@ -143,4 +156,4 @@ def run():
         pre_processing_rueters()
 
 
-run()
+# run()

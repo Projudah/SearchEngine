@@ -9,6 +9,7 @@
 
 nltk
 bs4
+strsim
 
 ## assumptions
 
