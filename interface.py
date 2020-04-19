@@ -16,6 +16,13 @@ begin = '''<html>
 
 end = '''</body>
 <script>
+var xhttp = new XMLHttpRequest();
+var timeOut;
+xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("suggestions").innerHTML = this.responseText;
+    }
+  };
 function fill(sug){
 var text = sug.innerHTML
 el = document.getElementById('searchInput');
@@ -23,20 +30,16 @@ el.value = text;
 getsuggestion();
 }
 function getsuggestion(){
-var xhttp = new XMLHttpRequest();
-xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById("suggestions").innerHTML = this.responseText;
-    }
-  };
+clearTimeout(timeOut);
+timeOut = setTimeout( function(){
 el = document.getElementById('searchInput');
 stype = document.getElementById('searchType').value;
 ctype = document.getElementById('collectionType').value;
-
 encoded = encodeURI(el.value)
 xhttp.open("POST", "", true);
 xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 xhttp.send("query="+encoded+"&collectionType="+ctype+"&searchType="+stype);
+}, 1000);
 document.getElementById("suggestions").innerHTML = 'Loading...'
 }
 
@@ -64,6 +67,10 @@ el.className = 'unmark'
 el.innerHTML = 'Unmark Relevant'
 }
 }
+
+function clr(){
+clearTimeout(timeOut);
+}
 </script>
 </html>'''
 
@@ -79,7 +86,7 @@ def search_bar(query='', type=None, coll=None, spell=False):
         expansion = main.globalExpand(query)
     suggestion = '''<h2>Suggestions</h2><p onclick="expand(this)" id='expansion'>%s</p>''' % (expansion) if expansion else ''
     bar = '''<h1 id="title">Searchify</h1>
-<form id="mainSearch" class="formInline" method="get" action="">
+<form id="mainSearch" class="formInline" method="get" action="" onsubmit="clr()">
 <div id='searchdiv'>
 	<input autocomplete="off" id='searchInput' list="suggestions" oninput="getsuggestion()" class = "searchBar" type="text" name="query" value="%s" placeholder="Enter a Search Query">
 	<div id="suggestions">

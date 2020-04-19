@@ -1,3 +1,7 @@
 ./idea
 __pycache__/
 docs/
+uoCorpus/
+reutersCorpus/
+uoIndexes/
+reutersIndexes/

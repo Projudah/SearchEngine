@@ -40,6 +40,7 @@ def normalize(token):
     return nltk.word_tokenize(token)[0] if token != '' else ''
 
 def parseAllWords(words):
+    # print(words)
     tokens = nltk.word_tokenize(words)
 
     tokens = [word.lower() for word in tokens]

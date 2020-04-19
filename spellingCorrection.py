@@ -32,7 +32,7 @@ def getMatches(query, collection):
                 distance = weighted_levenshtein.distance(query, term) #find weighted distance of the term and query
 
                 for i in range(len(best_matches_distances)):#look too see if this term is a better match than any currently in the top 5
-                    if distance < best_matches_distances[i]:
+                    if distance < best_matches_distances[i] and term not in best_matches:
                         best_matches_distances[i] = distance
                         best_matches[i] = term
                         break

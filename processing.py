@@ -214,8 +214,9 @@ def retrieveGram(term, corpus=uoIndexes):
         return bigramIndex[term]
     return None
 
-def getLMBigram(id, corpus=uoIndexes):
+def getLMBigram(id, corpus='uofo'):
     process()
+    corpus = uoIndexes if corpus == 'uofo' else reutIndexes
     with open(corpus+lmPath, 'r') as f:
         lmBigramIndex = json.load(f)
     if id in lmBigramIndex:

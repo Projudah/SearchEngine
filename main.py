@@ -81,7 +81,7 @@ class Query:
             # print('parsed:', parsed.string)
             # print(subQuery, split, left, right)
             side = self.getSide(split)
-            if not side:
+            if side is None:
                 return parsed
             type = self.getBooleanType(split[side])
             term = self.getTerm(split[side], side, type)
@@ -100,7 +100,11 @@ class Query:
                 left = Term(split[0].strip(), self.collection, self.type, self.isBigram)
                 right = Term(split[1].strip(), self.collection, self.type, self.isBigram)
             else:
+                newQuery = addPostMergeBrackets(dictionary.parseAllWords(subQuery))
+                if newQuery != subQuery:
+                    return Query(newQuery, self.collection, self.type, False)
                 left = Term(subQuery, self.collection, self.type, False)
+        # print('\nReturning sub as:', subQuery)
         return SubQuery(subQuery, left, right, type)
 
     def parse(self, query):
@@ -119,7 +123,10 @@ class Query:
                     right = subQueryObj
 
                 subQuery += LEFTBRACKET + subQueryObj.string + RIGHTBRACKET
-                i += len(subQuery) - 1
+                i += len(subQueryObj.string) + 1
+                # print('\nsubParsed:',subQueryObj.string)
+                # print('fullsub:', subQuery)
+                # print('\nentire:', query)
 
             elif char is RIGHTBRACKET:
                 return self.getSubQueryObject(subQuery, left, right)
@@ -134,6 +141,7 @@ class Query:
         if self.isBigram:
             results = self.queryObject.result()
             resultsString = addPostMergeBrackets(results, join=OR[1])
+            print("fucked", resultsString)
             return Query(resultsString, self.collection, self.type).result()
         return self.queryObject.result()
 
@@ -198,10 +206,13 @@ class Term:
 
     def checkSpelling(self):
         choices, scores = spellingCorrection.getMatches(self.string, self.collection)
+        # print('\n',self.string)
+        # print(choices)
+        # print(scores)
         minim = min(scores)
         closest = choices[scores.index(minim)]
 
-        if minim < 2:
+        if minim < 3:
             return closest
         return self.string
 
@@ -223,8 +234,7 @@ class Term:
 def query(query, coll, type):
     return Query(query.strip(' () '), coll, type).result()
 
-def score(word, prevword, id):
-    data = processing.getLMBigram(id)
+def score(word, prevword, data):
 
     if not prevword:
         if word in data:
@@ -238,29 +248,30 @@ def score(word, prevword, id):
                 return score/totPrev
     return 0
 
-def getSuggestion(queryList, id, exclude=[]):
-    lm = processing.getLMBigram(id)
-    possibleWords = lm[queryList[-1]] if queryList[-1] in lm else None
-    if possibleWords:
-        bestword = None
-        bestscore = None
-        possibleWords = possibleWords[processing.BIGRAMS].keys()
-        for posWord in possibleWords:
-            posWord = posWord.split(' ')[1]
-            scorelist = queryList + [posWord]
-            runningScore = 1
-            prevWord = None
-            for word in scorelist:
-                runningScore *= score(word, prevWord, id)
-                prevWord = word
-            # print(posWord, runningScore)
-            if posWord not in exclude:
-                bestword = bestword if bestscore and runningScore <= bestscore else posWord
-                bestscore = bestscore if bestscore and runningScore <= bestscore else runningScore
-        return bestword if bestscore else None
+def getSuggestion(queryList, lm, exclude=[]):
+    if lm:
+        possibleWords = lm[queryList[-1]] if queryList[-1] in lm else None
+        if possibleWords:
+            bestword = None
+            bestscore = None
+            possibleWords = possibleWords[processing.BIGRAMS].keys()
+            for posWord in possibleWords:
+                posWord = posWord.split(' ')[1]
+                scorelist = queryList + [posWord]
+                runningScore = 1
+                prevWord = None
+                for word in scorelist:
+                    runningScore *= score(word, prevWord, lm)
+                    prevWord = word
+                # print(posWord, runningScore)
+                if posWord not in exclude:
+                    bestword = bestword if bestscore and runningScore <= bestscore else posWord
+                    bestscore = bestscore if bestscore and runningScore <= bestscore else runningScore
+            return bestword if bestscore else None
     return None
 
-def cycleCompletion(n, query, id):
+def cycleCompletion(n, query, id, coll):
+    lm = processing.getLMBigram(id, coll)
     wList = dictionary.parseAllWords(query)
     length = len(wList)
     result = []
@@ -270,13 +281,13 @@ def cycleCompletion(n, query, id):
         #going forward
         word = None
         while not word and step < length:
-            word = getSuggestion(wList[step:], id, result)
+            word = getSuggestion(wList[step:], lm, result)
             step += 1
 
         #going backward
         step = length-1
         while not word and step > 0:
-            word = getSuggestion(wList[:step], id, result)
+            word = getSuggestion(wList[:step], lm, result)
             step -= 1
 
         add = [word] if word else []
@@ -291,21 +302,21 @@ def complete(queryStr, coll, type):
 
     if num >= 5:
         for res in results[:5]:
-            suggestions += cycleCompletion(1, queryStr, res)
+            suggestions += cycleCompletion(1, queryStr, res, coll)
     elif num is 4:
-        suggestions += cycleCompletion(2, queryStr, results[0])
-        suggestions += cycleCompletion(1, queryStr, results[1])
-        suggestions += cycleCompletion(1, queryStr, results[2])
-        suggestions += cycleCompletion(1, queryStr, results[3])
+        suggestions += cycleCompletion(2, queryStr, results[0], coll)
+        suggestions += cycleCompletion(1, queryStr, results[1], coll)
+        suggestions += cycleCompletion(1, queryStr, results[2], coll)
+        suggestions += cycleCompletion(1, queryStr, results[3], coll)
     elif num is 3:
-        suggestions += cycleCompletion(2, queryStr, results[0])
-        suggestions += cycleCompletion(2, queryStr, results[1])
-        suggestions += cycleCompletion(1, queryStr, results[2])
+        suggestions += cycleCompletion(2, queryStr, results[0], coll)
+        suggestions += cycleCompletion(2, queryStr, results[1], coll)
+        suggestions += cycleCompletion(1, queryStr, results[2], coll)
     elif num is 2:
-        suggestions += cycleCompletion(3, queryStr, results[0])
-        suggestions += cycleCompletion(2, queryStr, results[1])
+        suggestions += cycleCompletion(3, queryStr, results[0], coll)
+        suggestions += cycleCompletion(2, queryStr, results[1], coll)
     elif num is 1:
-        suggestions += cycleCompletion(5, queryStr, results[0])
+        suggestions += cycleCompletion(5, queryStr, results[0], coll)
     return list(set(suggestions))
 
 def synsAndHyps(word):
